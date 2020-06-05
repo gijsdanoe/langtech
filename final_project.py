@@ -54,6 +54,25 @@ def get_entity_id(entity_var):
         result_id = json['search'][0]['id']
         return result_id
 
+def get_answer(property_var, entity_list):
+    property_id = get_property_id(property_var)
+    entity_id = get_entity_id(entity_list)
+    print(property_id, entity_id)
+    if property_id != False or entity_id != False:
+        query = '''SELECT ?resultLabel WHERE { wd:'''+entity_id+''' wdt:'''+property_id+''' ?result . SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . } }'''
+        data = requests.get(URL,params={'query': query, 'format': 'json'}, headers=HEADERS).json()
+        if data['results']['bindings']:
+            answer_list = []
+            for result in data['results']['bindings']:
+                answer = result['resultLabel']['value']
+                answer_list.append(answer)
+            return answer_list
+        else:
+            return False
+    else:
+        return False
+    
+
 def binary_questions(question):
     question = question.lower().rstrip()
     nlp = spacy.load('en_core_web_sm')
@@ -74,41 +93,70 @@ def binary_questions(question):
                 property_var = total_list[0][0]
         q_answer = get_full_subject(result)
         entity_list = get_full_subject(result, nsubj="dobj")
-        print(property_var, entity_list, q_answer)
-    if result[0].dep_ == "ROOT"  and result[-1].pos_ == "NOUN":
-        entity_list = get_full_subject(result)
+    elif result[0].dep_ == "ROOT"  and result[-1].pos_ == "NOUN":
+        entity_list = get_full_subject(result, nsubj="nsubj")
         property_var = relation[result[0].text]
         q_answer = get_full_subject(result, nsubj="attr")
-        print(entity_list, property_var)
-    if result[0].dep_ == "ROOT"  and result[-1].pos_ == "ADJ":
+        if q_answer.strip() == '':
+            q_answer = get_full_subject(result, nsubj="dobj")
+            entity_list = entity_list.replace(q_answer, '')
+    elif result[0].dep_ == "ROOT"  and result[-1].pos_ == "ADJ":
         entity_list = get_full_subject(result, nsubj="compound")
         property_var = relation[result[0].text]
         q_answer = get_full_subject(result, nsubj="acomp")
-        print(entity_list, property_var)
+    else:
+        property_var = False
+        entitity_var = False
 
-    property_id = get_property_id(property_var)
-    entity_id = get_entity_id(entity_list)
-    if property_id != None or entity_id != None:
-        query = '''SELECT ?resultLabel WHERE { wd:'''+entity_id+''' wdt:'''+property_id+''' ?result . SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . } }'''
-        data = requests.get(URL,params={'query': query, 'format': 'json'}, headers=HEADERS).json()
-        if data['results']['bindings']:
-            answer_list = []
-            for result in data['results']['bindings']:
-                answer = result['resultLabel']['value']
-                answer_list.append(answer)
-        else:
-            pass
+    answer_list = get_answer(property_var, entity_list)
     answer = 'No'
     for item in answer_list:
         if q_answer in item.lower():
             answer = 'Yes'
     return answer
 
+def count_questions(question):
+    question = question.lower().rstrip()
+    nlp = spacy.load('en_core_web_sm')
+    if question[-1] == '?':
+        question = question[:-1]
+    result = nlp(question)
+    for item in result:
+        print(item, item.lemma_, item.pos_, item.dep_)
+    if result[0].dep_ == "advmod" and result[1].dep_ == "amod" and result[-1].pos_ == 'VERB' and result[2].dep_ == 'dobj':
+        property_var = get_full_subject(result, nsubj="dobj", dep="amod")
+        property_var = property_var.replace('how', '')
+        entity_var = get_full_subject(result, dep="amod")
+        print(entity_var, property_var)
+    elif result[0].dep_ == "advmod" and result[1].dep_ == "amod" and result[-1].pos_ == 'VERB' and result[2].dep_ != 'dobj':
+        entity_var = get_full_subject(result, dep="amod")
+        property_var = result[1].head.text
+        entity_var = entity_var.replace(property_var, '')
+        entity_var = entity_var.replace('how', '')
+        print(entity_var, property_var)
+    else:
+        property_var = False
+        entitity_var = False
+    
+    
+    answer_list = get_answer(property_var, entity_var)
+    if answer_list != False:
+        return len(answer_list)
+    else:
+        return 'No answer'
+
+
+    
+
+def order_questions(question):
+    pass
+
+
 def main(argv):
         print("Example of questions you can ask me:\n",
-        "What are symptoms of COVID-19?\n"
-        "Where was Albert Einstein born?\n"
-        "What are the components of air?\n"
+        "How many awards has Albert Einstein received? \n"
+        "How many languages did Nikola Tesla speak?\n"
+        "Is HTML a markup language?\n"
         "In what year was Google founded?\n"
         "In what city was Joe Rogan born? \n"
         "When did Albert Einstein die?\n"
@@ -118,10 +166,14 @@ def main(argv):
 
         print("Ask me a question:")
         for line in sys.stdin:
+            line = line.lower().rstrip()
             error = False
             # Alleen voor Yes/No questions
             # Breid main vooral ook uit voor de andere vraagsoorten
-            answer = binary_questions(line)
+            if line.split(' ') [0] == 'how':
+                answer = count_questions(line)
+            else:
+                answer = binary_questions(line)
             print(answer)
             print("New quesstion:\n")
             
