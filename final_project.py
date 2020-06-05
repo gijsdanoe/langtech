@@ -136,7 +136,7 @@ def count_questions(question):
         print(entity_var, property_var)
     else:
         property_var = False
-        entitity_var = False
+        entity_var = False
     
     
     answer_list = get_answer(property_var, entity_var)
