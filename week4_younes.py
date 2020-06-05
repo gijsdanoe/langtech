@@ -9,16 +9,16 @@ from nltk.corpus import wordnet as wn
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36'
 }
-url = 'https://query.wikidata.org/sparql'
 
 def nounify(verb_word):
-    print(verb_word)
     set_of_related_nouns = set()
+
     for lemma in wn.lemmas(wn.morphy(verb_word, wn.VERB), pos="v"):
         for related_form in lemma.derivationally_related_forms():
             for synset in wn.synsets(related_form.name(), pos=wn.NOUN):
                 if wn.synset('person.n.01') in synset.closure(lambda s:s.hypernyms()):
                     set_of_related_nouns.add(synset)
+
     return set_of_related_nouns
 
 def get_full_subject(result, dep="det", nsubj="nsubj"):
@@ -39,11 +39,6 @@ def get_property_entity(question):
     if question[-1] == '?':
         question = question[:-1]
     result = nlp(question)
-    for item in result:
-        print(item, item.lemma_, item.pos_, item.dep_)
-
-    for ent in result.ents:
-        print(ent.text, ent.start_char, ent.end_char, ent.label_)
 
     related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of '}
     if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass"):
@@ -111,47 +106,6 @@ def get_property_entity(question):
                         entity_list.append(token.text)
                     return " ".join(property_list), " ".join(entity_list)
 
-def binary_questions(question):
-    question = question.lower().rstrip()
-    nlp = spacy.load('en_core_web_sm')
-    if question[-1] == '?':
-        question = question[:-1]
-    result = nlp(question)
-    for item in result:
-        print(item, item.lemma_, item.pos_, item.dep_)
-
-    if result[0].dep_ == "aux" and result[1].dep_ == "nsubj":
-        for item in result:
-            if item.dep_ == "ROOT":
-                r = nounify(item.lemma_)
-                print(r)
-                total_list = [(x.name().split('.')[0], x.name().split('.')[-1]) for x in r]
-                total_list.sort(key=lambda x: x[1])
-                property_var = total_list[0][0]
-                print(property_var)
-        q_answer = get_full_subject(result)
-        entity_list = get_full_subject(result, nsubj="dobj")
-        print(property_var, entity_list, q_answer)
-
-
-    property_id = get_property_id(property_var)
-    entity_id = get_entity_id(entity_list)
-    if property_id != None or entity_id != None:
-        query = '''SELECT ?resultLabel WHERE { wd:'''+entity_id+''' wdt:'''+property_id+''' ?result . SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . } }'''
-        data = requests.get(url,params={'query': query, 'format': 'json'}, headers=headers).json()
-        if data['results']['bindings']:
-            answer_list = []
-            for result in data['results']['bindings']:
-                answer = result['resultLabel']['value']
-                answer_list.append(answer)
-        else:
-            pass
-    answer = 'no'
-    for item in answer_list:
-        if q_answer in item.lower:
-            answer = 'yes'
-    return answer_list
-
 def get_property_id(property_var):
     url = 'https://www.wikidata.org/w/api.php'
     params = {'action':'wbsearchentities','language':'en','format':'json','type':'property'}
@@ -190,13 +144,11 @@ def main(argv):
         url = 'https://query.wikidata.org/sparql'
         for line in sys.stdin:
             error = False
-            #try:
-            property_var, entity_var = binary_questions(line)
-            print(property_var, entity_var, "2")
-            #except Exception as e:
-            print("\nCould not find answer! Try again:")
-            
-            error = True
+            try:
+                property_var, entity_var = get_property_entity(line)
+            except Exception as e:
+                print("\nCould not find answer! Try again:")
+                error = True
             if error == False:
                 try:
                     property_id = get_property_id(property_var)
