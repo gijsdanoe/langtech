@@ -145,7 +145,47 @@ def count_questions(question):
     else:
         return 'No answer'
 
+def create_and_fire_query(line):
+    nlp = spacy.load('en_core_web_sm')
+    result = nlp(line)
+    ll = []
+    root = []
+    for token in result:
+        if token.pos_ != "DET":  # remove determiners
+            ll.append(token.text)
+        if token.dep_ == "ROOT":
+            root.append(token.lemma_)
+    result = nlp(' '.join(ll))
+    nounlist = []
+    for token in result.noun_chunks:
+        nounlist.append(token.text)
+    entity = nounlist[-1]  # last noun chunk is entity
+    if len(nounlist) > 2:  # if list of noun chunks is longer than 3 the second item is property
+        property = nounlist[-2]
+    else:  # else the lemma of the root of the sentence is the property
+        property = root[0]
+    propertylist = get_property_id(property)
+    entitylist = get_entity_id(entity)
 
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"}
+    url = 'https://query.wikidata.org/sparql'
+
+    # for every possible entity and property do the query, only include queries that return answer
+    resultlist = []
+    for ent in entitylist:
+        for prop in propertylist:
+            query = "SELECT ?xLabel WHERE {wd:" + ent + " wdt:" + prop + " ?x SERVICE wikibase:label {bd:serviceParam wikibase:language 'en' .}}"
+            try:
+                data = requests.get(url, headers=headers, params={'query': query, 'format': 'json'}).json()
+                multilist = []
+                for item in data['results']['bindings']:
+                    for var in item:
+                        multilist.append(item[var]['value'])
+                resultlist.append(multilist)
+            except:
+                pass
+    resultlist = [x for x in resultlist if x != []]
+    return resultlist
     
 
 def order_questions(question):
@@ -168,6 +208,7 @@ def main(argv):
         for line in sys.stdin:
             line = line.lower().rstrip()
             error = False
+            # Lennart vertel ons ff wanneer we welke functie kunnen runnen
             # Alleen voor Yes/No questions
             # Breid main vooral ook uit voor de andere vraagsoorten
             if line.split(' ') [0] == 'how':
@@ -175,6 +216,13 @@ def main(argv):
             else:
                 answer = binary_questions(line)
             print(answer)
+            try:
+                answer = create_and_fire_query(line)
+                for result in answer[0]:
+                    print(result)  # print first result (most obvious one)
+            except:
+                print("Could not find answer")
+            
             print("New quesstion:\n")
             
             
