@@ -4,6 +4,8 @@ import sys
 import re
 import spacy
 from nltk.corpus import wordnet as wn
+from Levenshtein import distance as levenshtein_distance
+
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36'
@@ -191,6 +193,38 @@ def create_and_fire_query(line):
 def order_questions(question):
     pass
 
+def description(line):
+    nlp = spacy.load('en_core_web_sm')
+    result = nlp(line)
+    ll = []
+    for token in result:
+        if token.pos_ != "DET":  # remove determiners
+            ll.append(token.text)
+    result = nlp(' '.join(ll))
+    nounlist = []
+    for token in result.noun_chunks:
+        nounlist.append(token.text)
+    nounlist.pop(0)
+    entity = nounlist[-1]  # last noun chunk is entity
+
+    url = "https://www.wikidata.org/w/api.php"
+    params = {"action":"wbsearchentities","language":"en","format":"json"}
+    params["search"] = entity.rstrip()
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"}
+    json = requests.get(url, params, headers=headers).json()
+
+    lslist = []
+    desclist = []
+
+    for result in json['search']:
+        try:
+            lslist.append(levenshtein_distance(result['label'], entity))
+            desclist.append(result['description'])
+        except:
+            pass
+    return desclist[lslist.index(min(lslist))]
+
+
 
 def main(argv):
         print("Example of questions you can ask me:\n",
@@ -223,7 +257,7 @@ def main(argv):
             except:
                 print("Could not find answer")
             
-            print("New quesstion:\n")
+            print("New question:\n")
             
             
 
