@@ -75,7 +75,7 @@ def get_answer(property_var, entity_list):
         return False
     
 
-def binary_questions(question):
+def binary_questions(question, id):
     question = question.lower().rstrip()
     nlp = spacy.load('en_core_web_sm')
     if question[-1] == '?':
@@ -108,16 +108,18 @@ def binary_questions(question):
         q_answer = get_full_subject(result, nsubj="acomp")
     else:
         property_var = False
-        entitity_var = False
+        entity_list = False
+
+    print(property_var, entity_list)
 
     answer_list = get_answer(property_var, entity_list)
     answer = 'No'
     for item in answer_list:
         if q_answer in item.lower():
             answer = 'Yes'
-    return answer
+    print(id + "\t" + answer)
 
-def count_questions(question):
+def count_questions(question, id):
     question = question.lower().rstrip()
     nlp = spacy.load('en_core_web_sm')
     if question[-1] == '?':
@@ -142,10 +144,11 @@ def count_questions(question):
     
     
     answer_list = get_answer(property_var, entity_var)
+    print(id + "\t", end='')
     if answer_list != False:
-        return len(answer_list)
+        print(len(answer_list))
     else:
-        return 'No answer'
+        print('No answer')
 
 def create_and_fire_query(line):
     nlp = spacy.load('en_core_web_sm')
@@ -193,7 +196,7 @@ def create_and_fire_query(line):
 def order_questions(question):
     pass
 
-def description(line):
+def description(line, id):
     nlp = spacy.load('en_core_web_sm')
     result = nlp(line)
     ll = []
@@ -225,14 +228,12 @@ def description(line):
     return desclist[lslist.index(min(lslist))]
 
 
-def get_questions_other(question):
+def get_questions_other(question, id):
     question = question.lower().rstrip()
     nlp = spacy.load('en_core_web_sm')
     if question[-1] == '?':
         question = question[:-1]
     result = nlp(question)
-    for item in result:
-        print(item, item.lemma_, item.pos_, item.dep_)
 
     related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention '}
     if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass"):
@@ -240,31 +241,29 @@ def get_questions_other(question):
         r = nounify(result[1].lemma_)
         property_var = list(r)[0].name().split('.')[0]
         entity_list = get_full_subject(result)
-        #return property_var, entity_list
     elif (result[0].dep_ == "nsubj" and result[1].dep_ == "ROOT"):
-        r = nounify(result[1].lemma_)
-        property_var = list(r)[0].name().split('.')[0]
+        try:
+            r = nounify(result[1].lemma_)
+            property_var = list(r)[0].name().split('.')[0]
+        except:
+            property_var = get_full_subject(result, nsubj="attr")
         entity_list = get_full_subject(result, nsubj="dobj")
-        #return property_var, entity_list
+        if entity_list.strip() == "":
+            entity_list = get_full_subject(result, nsubj="pobj")
     elif (result[1].dep_ == "auxpass") and (result[0].dep_ == "advmod"):
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
         try:
             entity_list = [(x.text) for x in result.ents][0]
         except:
             entity_list = get_full_subject(result)
-        #return property_var, entity_list
     elif result[0].dep_ == "prep" and result[1].dep_ == "det" and result[-1].dep_ == "ROOT":
         property_var = result[-1].text
         entity_list = get_full_subject(result, nsubj="dep")
-        #return property_var, entity_list
     elif result[0].dep_ == "prep" and result[1].dep_ == "det" and result[-1].dep_ != "ROOT":
         property_var = related_to_dict[result[0].text + ' ' +result[1].text + ' ' + result[2].text] + related_to_dict[result[-1].text]
         entity_list =  [(x.text) for x in result.ents][0]
-        #return property_var, entity_list
     elif result[0].dep_ == "advmod" and result[1].dep_ == "ROOT":
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
-        entity_list =  get_full_subject(result, dep="acl")
-        #return property_var, entity_list
     else:
         property_tokens = []
         entity_tokens = []
@@ -308,8 +307,9 @@ def get_questions_other(question):
                     property_var = " ".join(property_list)
                     entity_list = " ".join(entity_list)
                     #return " ".join(property_list), " ".join(entity_list)
-    print(property_var, entity_list)
+    print(entity_list, property_var)
     answer_list = get_answer(property_var, entity_list)
+    print(id, "\t", end='')
     for item in answer_list:
         print(item, '\t')
 
@@ -329,19 +329,22 @@ def main(argv):
 
         print("Ask me a question:")
         for line in sys.stdin:
-            line = line.lower().rstrip()
+            line = line.split("\t")
+            q_id = line[0]
+            question = line[1]
+            print(question)
             error = False
             # Lennart vertel ons ff wanneer we welke functie kunnen runnen
             # Alleen voor Yes/No questions
             # Breid main vooral ook uit voor de andere vraagsoorten
-            if line.split(' ') [0] == 'how':
-                answer = count_questions(line)
-            elif line.split(' ') [0] == 'who':
-                answer = get_questions_other(line)
+            if question.split(' ')[0] == 'How':
+                answer = count_questions(question, q_id)
+            elif question.split(' ')[0] == 'who':
+                answer = get_questions_other(question, q_id)
             else:
-                answer = binary_questions(line)
+                answer = binary_questions(question, q_id)
             try:
-                answer = create_and_fire_query(line)
+                answer = create_and_fire_query(question)
                 for result in answer[0]:
                     print(result)  # print first result (most obvious one)
             except:
