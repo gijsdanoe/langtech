@@ -225,6 +225,95 @@ def description(line):
     return desclist[lslist.index(min(lslist))]
 
 
+def get_questions_other(question):
+    question = question.lower().rstrip()
+    nlp = spacy.load('en_core_web_sm')
+    if question[-1] == '?':
+        question = question[:-1]
+    result = nlp(question)
+    for item in result:
+        print(item, item.lemma_, item.pos_, item.dep_)
+
+    related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention '}
+    if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass"):
+        property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
+        r = nounify(result[1].lemma_)
+        property_var = list(r)[0].name().split('.')[0]
+        entity_list = get_full_subject(result)
+        #return property_var, entity_list
+    elif (result[0].dep_ == "nsubj" and result[1].dep_ == "ROOT"):
+        r = nounify(result[1].lemma_)
+        property_var = list(r)[0].name().split('.')[0]
+        entity_list = get_full_subject(result, nsubj="dobj")
+        #return property_var, entity_list
+    elif (result[1].dep_ == "auxpass") and (result[0].dep_ == "advmod"):
+        property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
+        try:
+            entity_list = [(x.text) for x in result.ents][0]
+        except:
+            entity_list = get_full_subject(result)
+        #return property_var, entity_list
+    elif result[0].dep_ == "prep" and result[1].dep_ == "det" and result[-1].dep_ == "ROOT":
+        property_var = result[-1].text
+        entity_list = get_full_subject(result, nsubj="dep")
+        #return property_var, entity_list
+    elif result[0].dep_ == "prep" and result[1].dep_ == "det" and result[-1].dep_ != "ROOT":
+        property_var = related_to_dict[result[0].text + ' ' +result[1].text + ' ' + result[2].text] + related_to_dict[result[-1].text]
+        entity_list =  [(x.text) for x in result.ents][0]
+        #return property_var, entity_list
+    elif result[0].dep_ == "advmod" and result[1].dep_ == "ROOT":
+        property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
+        entity_list =  get_full_subject(result, dep="acl")
+        #return property_var, entity_list
+    else:
+        property_tokens = []
+        entity_tokens = []
+        if result[0].dep_ == "nsubj":
+            for item in result[1:]:
+                if item.dep_ == "nsubj":
+                    subject = []
+                    for d in item.subtree:
+                        if d.dep_ != 'det':
+                            subject.append(d)
+                    for i in range(len(subject)):
+                        if subject[i].dep_ == 'case':
+                            entity_tokens = subject[:i]
+                            property_tokens = subject[i+1:]
+                    property_list = []
+                    entity_list = []
+                    for token in property_tokens:
+                        property_list.append(token.text)
+                    for token in entity_tokens:
+                        entity_list.append(token.text)
+                    property_var = " ".join(property_list)
+                    entity_list = " ".join(entity_list)
+                    #return " ".join(property_list), " ".join(entity_list)
+        else:
+            for item in result[1:]:
+                if item.dep_ == "nsubj":
+                    subject = []
+                    for d in item.subtree:
+                        if d.dep_ != 'det':
+                            subject.append(d)
+                    for i in range(len(subject)):
+                        if subject[i].dep_ == 'prep':
+                            property_tokens = subject[:i]
+                            entity_tokens = subject[i+1:]
+                    property_list = []
+                    entity_list = []
+                    for token in property_tokens:
+                        property_list.append(token.text)
+                    for token in entity_tokens:
+                        entity_list.append(token.text)
+                    property_var = " ".join(property_list)
+                    entity_list = " ".join(entity_list)
+                    #return " ".join(property_list), " ".join(entity_list)
+    print(property_var, entity_list)
+    answer_list = get_answer(property_var, entity_list)
+    for item in answer_list:
+        print(item, '\t')
+
+
 
 def main(argv):
         print("Example of questions you can ask me:\n",
@@ -247,9 +336,10 @@ def main(argv):
             # Breid main vooral ook uit voor de andere vraagsoorten
             if line.split(' ') [0] == 'how':
                 answer = count_questions(line)
+            elif line.split(' ') [0] == 'who':
+                answer = get_questions_other(line)
             else:
                 answer = binary_questions(line)
-            print(answer)
             try:
                 answer = create_and_fire_query(line)
                 for result in answer[0]:
