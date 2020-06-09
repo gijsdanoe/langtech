@@ -46,6 +46,17 @@ def get_property_id(property_var):
         result_id = json['search'][0]['id']
         return result_id
 
+def get_entity_id(entity_var):
+    url = 'https://www.wikidata.org/w/api.php'
+    params = {'action':'wbsearchentities','language':'en','format':'json'}
+    params['search'] = entity_var
+    json = requests.get(url,params, headers=HEADERS).json()
+    if len(json['search']) == 0:
+        return False
+    else:
+        result_id = json['search'][0]['id']
+        return result_id
+
 # get all possible property id's
 def get_property(property):
     url = "https://www.wikidata.org/w/api.php"
@@ -69,17 +80,6 @@ def get_entity(entity):
     for result in json["search"]:
         entlist.append(result["id"])
     return entlist
-
-def get_entity_id(entity_var):
-    url = 'https://www.wikidata.org/w/api.php'
-    params = {'action':'wbsearchentities','language':'en','format':'json'}
-    params['search'] = entity_var
-    json = requests.get(url,params, headers=HEADERS).json()
-    if len(json['search']) == 0:
-        return False
-    else:
-        result_id = json['search'][0]['id']
-        return result_id
 
 def get_answer(property_var, entity_list):
     property_id = get_property_id(property_var)
