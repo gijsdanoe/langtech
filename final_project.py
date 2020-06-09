@@ -298,7 +298,12 @@ def get_questions_other(question, id):
             property_var = get_full_subject(result)
         if entity_list in property_var:
             property_var = property_var.replace(entity_list, '')
+            
+        try:
             property_var = related_to_dict[property_var]
+        except:
+            property_var = property_var.replace('of', '')
+        print(property_var, entity_list)
         
     elif result[0].dep_ == "ROOT" and result[-1].dep_ == "pobj":
         property_var = get_full_subject(result, nsubj='dobj')
