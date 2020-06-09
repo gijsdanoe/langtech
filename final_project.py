@@ -257,10 +257,10 @@ def get_questions_other(question, id):
     if question[-1] == '?':
         question = question[:-1]
     result = nlp(question)
+
     related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention ', 'big': 'diameter', 'heavy': 'mass', 'study': 'study', 'old': 'age', 'weigh': 'mass'}
     if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass" and result[1].dep_ != "acomp"):
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
-        print(property_var)
         if property_var.strip() == 'place of study':
             property_var = 'educated at'
         if property_var.strip() == 'cause of mass':
@@ -301,6 +301,16 @@ def get_questions_other(question, id):
             property_var = property_var.replace('members', 'member')
         if 'mission' in entity_list:
             entity_list = entity_list.replace('mission', '')
+    elif result[0].dep_ == "nsubjpass" and result[1].dep_ == "auxpass":
+        p = [item for item in result if item.dep_ == 'ROOT']
+        r = nounify(p[0].lemma_)
+        property_var = list(r)[1].name().split('.')[0]
+        if property_var == 'finder':
+            property_var = 'inventor'
+        try:
+            entity_list = [(x.text) for x in result.ents][0]
+        except:
+            entity_list = get_full_subject(result, nsubj='nsubjpass')
     else:
         property_tokens = []
         entity_tokens = []
@@ -348,7 +358,7 @@ def get_questions_other(question, id):
         for item in answer_list:
             print(item, '\t', end='')
         print('')
-    except TypeError:
+    except:
         print(id, "\t", end='')
         print("No answer")
 
@@ -385,8 +395,8 @@ def main(argv):
                 get_questions_other(question, q_id)
             elif questiont == 'count':
                 count_questions(question, q_id)
-            elif 'x_y ' in questiont:
-                print(q_id, '\t', 'No answer pik')
+            #elif 'x_y ' in questiont:
+            #    print(q_id, '\t', 'No answer pik')
             elif questiont == 'description':
                 description(question, q_id)
             elif questiont == 'x_y piep piper':
@@ -395,9 +405,10 @@ def main(argv):
                 get_questions_other(question, q_id)
             elif questiont == 'how':
                 get_questions_other(question, q_id)
+            elif questiont == 'where':
+                get_questions_other(question, q_id)
             else:
-                print(q_id, '\t', 'joo nog steeds geen antwoord')
-
+                get_questions_other(question, q_id)
             
             
 
