@@ -28,6 +28,9 @@ def questiontype(question):
     elif question.split(" ")[0] == 'when':
         return 'when'
 
+    elif question.split(" ")[0] == 'where':
+        return 'where'
+
     elif tokens[0].pos_ =='ADV' and tokens[1].pos_ == 'ADJ':
         if question.split(" ")[1] == 'many':
             return 'count'
@@ -36,7 +39,7 @@ def questiontype(question):
     elif tokens[0].pos_ == 'ADV' and tokens[1].pos_ == 'AUX':
         return 'how'
 
-    elif tokens[0].pos_ == 'VERB' and tokens[1].pos_ == 'DET':
+    elif tokens[0].pos_ == 'VERB' or question.split(" ")[0] == 'name' and tokens[1].pos_ == 'DET':
         return 'x_y_list'
     
     elif tokens[0].pos_ == 'ADP' and tokens[1].pos_ == 'DET':
