@@ -220,11 +220,11 @@ def order_questions(question):
     pass
 
 def description(line, id):
-    nlp = spacy.load('en_core_web_sm')
+    nlp = spacy.load('en_core_websm')
     result = nlp(line)
     ll = []
     for token in result:
-        if token.pos_ != "DET":  # remove determiners
+        if token.pos != "DET":  # remove determiners
             ll.append(token.text)
     result = nlp(' '.join(ll))
     nounlist = []
@@ -248,14 +248,7 @@ def description(line, id):
             desclist.append(result['description'])
         except:
             pass
-    #return desclist[lslist.index(min(lslist))]
-    resultlist = desclist[lslist.index(min(lslist))]
-    print(id + "\t", end='')
-    if resultlist is not None:
-        for item in resultlist:
-             print(item, '\t', end='')
-    else:
-        print('No answer')
+    print(id, '\t', desclist[lslist.index(min(lslist))])
 
 
 def get_questions_other(question, id):
