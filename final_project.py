@@ -84,6 +84,7 @@ def get_entity_id(entity_var):
 def get_answer(property_var, entity_list):
     property_id = get_property_id(property_var)
     entity_id = get_entity_id(entity_list)
+    print(property_id, entity_id)
     if property_id != False or entity_id != False:
         query = '''SELECT ?resultLabel WHERE { wd:'''+entity_id+''' wdt:'''+property_id+''' ?result . SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . } }'''
         data = requests.get(URL,params={'query': query, 'format': 'json'}, headers=HEADERS).json()
@@ -258,7 +259,13 @@ def get_questions_other(question, id):
         question = question[:-1]
     result = nlp(question)
 
-    related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention ', 'big': 'diameter', 'heavy': 'mass', 'study': 'study', 'old': 'age', 'weigh': 'mass'}
+    
+    #if result[0].pos_ == 'ADP':
+    #    question = question.replace(result[0].text + ' ', '', 1)
+    #    result = nlp(question)
+    for item in result:
+        print(item, item.dep_, item.pos_)
+    related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention ', 'big': 'diameter', 'heavy': 'mass', 'study': 'study', 'old': 'age', 'weigh': 'mass', 'effects of ': 'has effect'}
     if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass" and result[1].dep_ != "acomp"):
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
         if property_var.strip() == 'place of study':
@@ -290,6 +297,17 @@ def get_questions_other(question, id):
             entity_list = [(x.text) for x in result.ents][0]
         except:
             entity_list = get_full_subject(result)
+    elif result[0].dep_ == "attr" and result[1].dep_ == "ROOT":
+        entity_list = get_full_subject(result, nsubj='pobj')
+        try:
+            property_var = [(x.text) for x in result.ents][0]
+        except:
+            property_var = get_full_subject(result)
+        print(entity_list, property_var)
+        if entity_list in property_var:
+            property_var = property_var.replace(entity_list, '')
+            property_var = related_to_dict[property_var]
+        
     elif result[0].dep_ == "ROOT" and result[-1].dep_ == "pobj":
         property_var = get_full_subject(result, nsubj='dobj')
         entity_list = get_full_subject(result, nsubj='pobj')
@@ -311,6 +329,13 @@ def get_questions_other(question, id):
             entity_list = [(x.text) for x in result.ents][0]
         except:
             entity_list = get_full_subject(result, nsubj='nsubjpass')
+    elif result[0].pos_ == "ADP" and result[-1].dep_ == 'acl':
+        property_var = result[-1].text + ' ' + result[0].text
+        try:
+            entity_list = [(x.text) for x in result.ents][0]
+        except:
+            entity_list = get_full_subject(result, nsubj='attr', dep='acl')
+        
     else:
         property_tokens = []
         entity_tokens = []
@@ -353,6 +378,7 @@ def get_questions_other(question, id):
                     property_var = " ".join(property_list)
                     entity_list = " ".join(entity_list)
     try:
+        print(property_var, entity_list)
         answer_list = get_answer(property_var, entity_list)
         print(id, "\t", end='')
         for item in answer_list:
@@ -395,12 +421,10 @@ def main(argv):
                 get_questions_other(question, q_id)
             elif questiont == 'count':
                 count_questions(question, q_id)
-            #elif 'x_y ' in questiont:
-            #    print(q_id, '\t', 'No answer pik')
             elif questiont == 'description':
                 description(question, q_id)
             elif questiont == 'x_y piep piper':
-                create_and_fire_query(question, q_id)
+                get_questions_other(question, q_id)
             elif questiont == 'when':
                 get_questions_other(question, q_id)
             elif questiont == 'how':
