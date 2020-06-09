@@ -267,7 +267,7 @@ def get_questions_other(question, id):
         question = question[:-1]
     result = nlp(question)
 
-    related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention '}
+    related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention '}
     if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass"):
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
         r = nounify(result[1].lemma_)
@@ -296,6 +296,10 @@ def get_questions_other(question, id):
         entity_list =  [(x.text) for x in result.ents][0]
     elif result[0].dep_ == "advmod" and result[1].dep_ == "ROOT":
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
+        try:
+            entity_list = [(x.text) for x in result.ents][0]
+        except:
+            entity_list = get_full_subject(result)
     else:
         property_tokens = []
         entity_tokens = []
@@ -340,10 +344,14 @@ def get_questions_other(question, id):
                     entity_list = " ".join(entity_list)
                     #return " ".join(property_list), " ".join(entity_list)
     print(entity_list, property_var)
-    answer_list = get_answer(property_var, entity_list)
-    print(id, "\t", end='')
-    for item in answer_list:
-        print(item, '\t', end='')
+    try:
+        answer_list = get_answer(property_var, entity_list)
+        print(id, "\t", end='')
+        for item in answer_list:
+            print(item, '\t', end='')
+        print("\n")
+    except TypeError:
+        print("No answer")
 
 
 
@@ -363,12 +371,13 @@ def main(argv):
         for line in sys.stdin:
             line = line.split("\t")
             q_id = line[0]
-            question = line[1]
+            question = line[1].lower()
+            print(question)
             # Lennart vertel ons ff wanneer we welke functie kunnen runnen
             # Alleen voor Yes/No questions
             # Breid main vooral ook uit voor de andere vraagsoorten
             questiont = questiontype(question)
-            if questiont == 'yes_no':
+            if questiont == 'binary':
                 binary_questions(question, q_id)
             elif questiont == 'x_y':
                 get_questions_other(question, q_id)
@@ -377,11 +386,13 @@ def main(argv):
             elif questiont == 'count':
                 count_questions(question, q_id)
             elif 'x_y ' in questiont:
-                print('No answer pik')
+                print(q_id, '\t', 'No answer pik\n')
             elif questiont == 'x_y piep piper':
                 get_questions_other(question, q_id)
+            elif questiont == 'when':
+                get_questions_other(question, q_id)
             else:
-                print('joo nog steeds geen antwoord\n')
+                print(q_id, '\t', 'joo nog steeds geen antwoord\n')
             
             print("New question:\n")
             

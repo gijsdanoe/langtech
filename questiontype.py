@@ -59,16 +59,6 @@ def questiontype(question):
 
 #for line in qlist:
 
-for line in sys.stdin:
-    nlp = spacy.load('en_core_web_sm')
-    tokens = nlp(line)
-    print([i.pos_ for i in tokens])
-    try:
-        qtype = questiontype(line)
-        print(qtype, line)
-    except:
-        print(None, line)
-
 #with open(sys.argv[1], 'r') as f:
 #    qlist = list()
 #    for line in f:
