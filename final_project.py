@@ -218,7 +218,7 @@ def create_and_fire_query(line, id):
     #return resultlist
 
     print(id + "\t", end='')
-    if resultlist != False:
+    if resultlist is not None:
         for item in resultlist:
              print(item, '\t', end='')
     else:
@@ -391,6 +391,8 @@ def main(argv):
                 get_questions_other(question, q_id)
             elif questiont == 'when':
                 get_questions_other(question, q_id)
+            elif questiont == 'how':
+                create_and_fire_query(question, q_id)
             else:
                 print(q_id, '\t', 'joo nog steeds geen antwoord\n')
             
