@@ -4,7 +4,7 @@ import sys
 import re
 import spacy
 from nltk.corpus import wordnet as wn
-from Levenshtein import distance as levenshtein_distance
+from difflib import ndiff
 from questiontype import questiontype
 
 
@@ -13,6 +13,18 @@ HEADERS = {
 }
 URL = 'https://query.wikidata.org/sparql'
 
+
+def levenshtein_distance(str1, str2):
+    counter = {"+": 0, "-": 0}
+    distance = 0
+    for edit_code, *_ in ndiff(str1, str2):
+        if edit_code == " ":
+            distance += max(counter.values())
+            counter = {"+": 0, "-": 0}
+        else:
+            counter[edit_code] += 1
+    distance += max(counter.values())
+    return distance
 
 def nounify(verb_word):
     set_of_related_nouns = set()
