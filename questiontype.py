@@ -8,7 +8,7 @@ import sys
 def questiontype(question):
     """takes as input a question and returns one of the different types as specified on slide 5 of the instructions"""
     nlp = spacy.load('en_core_web_sm')
-    tokens = nlp(line)
+    tokens = nlp(question)
     # filter specific words related to highest/lowest/first/last questions
     superlatives = ["biggest", "highest", "longest", "hottest", "lowest", "first", "last"]
     superlative = [i for i in question.split(" ") if i in superlatives]
@@ -29,26 +29,26 @@ def questiontype(question):
         return 'x_y piep piper'
 
     #who question, almost always inventor, quick solution for now
-    elif questions.split(" ") == 'who':
+    elif question.split(" ") == 'who':
         return 'inventor_y'
     #else:
         
 
 # testing the function
 
-with open(sys.argv[1], 'r') as f:
-    qlist = list()
-    for line in f:
-        line = line.rstrip()
-        qlist.append(line)
+#with open(sys.argv[1], 'r') as f:
+#    qlist = list()
+#    for line in f:
+#        line = line.rstrip()
+#        qlist.append(line)
 
 #for line in qlist:
-for line in qlist:
-    try:
-        qtype = questiontype(line)
-        print(qtype, line)
-    except:
-        print(None, line)
+#for line in qlist:
+#    try:
+#        qtype = questiontype(line)
+#        print(qtype, line)
+#    except:
+#        print(None, line)
 
 
 

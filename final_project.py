@@ -5,6 +5,7 @@ import re
 import spacy
 from nltk.corpus import wordnet as wn
 from Levenshtein import distance as levenshtein_distance
+from questiontype import questiontype
 
 
 HEADERS = {
@@ -174,7 +175,7 @@ def count_questions(question, id):
     else:
         print('No answer')
 
-def create_and_fire_query(line):
+def create_and_fire_query(line, id):
     nlp = spacy.load('en_core_web_sm')
     result = nlp(line)
     ll = []
@@ -214,7 +215,14 @@ def create_and_fire_query(line):
             except:
                 pass
     resultlist = [x for x in resultlist if x != []]
-    return resultlist
+    #return resultlist
+
+    print(id + "\t", end='')
+    if resultlist != False:
+        for item in resultlist:
+             print(item, '\t', end='')
+    else:
+        print('No answer')
     
 
 def order_questions(question):
@@ -335,7 +343,7 @@ def get_questions_other(question, id):
     answer_list = get_answer(property_var, entity_list)
     print(id, "\t", end='')
     for item in answer_list:
-        print(item, '\t')
+        print(item, '\t', end='')
 
 
 
@@ -356,23 +364,24 @@ def main(argv):
             line = line.split("\t")
             q_id = line[0]
             question = line[1]
-            print(question)
-            error = False
             # Lennart vertel ons ff wanneer we welke functie kunnen runnen
             # Alleen voor Yes/No questions
             # Breid main vooral ook uit voor de andere vraagsoorten
-            if question.split(' ')[0] == 'How':
-                answer = count_questions(question, q_id)
-            elif question.split(' ')[0] == 'who':
-                answer = get_questions_other(question, q_id)
+            questiont = questiontype(question)
+            if questiont == 'yes_no':
+                binary_questions(question, q_id)
+            elif questiont == 'x_y':
+                get_questions_other(question, q_id)
+            elif questiont == 'x_y_list':
+                create_and_fire_query(question, q_id)
+            elif questiont == 'count':
+                count_questions(question, q_id)
+            elif 'x_y ' in questiont:
+                print('No answer pik')
+            elif questiont == 'x_y piep piper':
+                get_questions_other(question, q_id)
             else:
-                answer = binary_questions(question, q_id)
-            try:
-                answer = create_and_fire_query(question)
-                for result in answer[0]:
-                    print(result)  # print first result (most obvious one)
-            except:
-                print("Could not find answer")
+                print('joo nog steeds geen antwoord\n')
             
             print("New question:\n")
             
