@@ -45,6 +45,30 @@ def get_property_id(property_var):
         result_id = json['search'][0]['id']
         return result_id
 
+# get all possible property id's
+def get_property(property):
+    url = "https://www.wikidata.org/w/api.php"
+    params = {"action":"wbsearchentities","language":"en","format":"json","type":"property"}
+    params["search"] = property
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"}
+    json = requests.get(url, params, headers=headers).json()
+    proplist = []
+    for result in json["search"]:
+        proplist.append(result["id"])
+    return proplist
+
+# get all possible entity id's
+def get_entity(entity):
+    url = "https://www.wikidata.org/w/api.php"
+    params = {"action":"wbsearchentities","language":"en","format":"json"}
+    params["search"] = entity
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"}
+    json = requests.get(url, params, headers=headers).json()
+    entlist = []
+    for result in json["search"]:
+        entlist.append(result["id"])
+    return entlist
+
 def get_entity_id(entity_var):
     url = 'https://www.wikidata.org/w/api.php'
     params = {'action':'wbsearchentities','language':'en','format':'json'}
