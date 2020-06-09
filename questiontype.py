@@ -42,7 +42,6 @@ def questiontype(question):
     elif tokens[0].pos_ == 'ADP' and tokens[1].pos_ == 'DET':
         return 'x_y piep piper'
 
-<<<<<<< HEAD
     elif tokens[0].pos_ == 'PRON' and tokens[1].pos_ == 'AUX':
         if 'ADP' not in [i.pos_ for i in tokens]:
             return 'description'
@@ -51,30 +50,15 @@ def questiontype(question):
     #other questiosn are solved by Younes' other function
     else:
         return 'other'
-=======
+
     #who question, almost always inventor, quick solution for now
-    elif question.split(" ") == 'who':
-        return 'inventor_y'
->>>>>>> f683e17445e84d99a8e6fe0c3f949d0de81f073b
-    #else:
         
 
 # testing the function
 
-<<<<<<< HEAD
 
 #for line in qlist:
 
-for line in sys.stdin:
-    nlp = spacy.load('en_core_web_sm')
-    tokens = nlp(line)
-    print([i.pos_ for i in tokens])
-    try:
-        qtype = questiontype(line)
-        print(qtype, line)
-    except:
-        print(None, line)
-=======
 #with open(sys.argv[1], 'r') as f:
 #    qlist = list()
 #    for line in f:
@@ -88,7 +72,6 @@ for line in sys.stdin:
 #        print(qtype, line)
 #    except:
 #        print(None, line)
->>>>>>> f683e17445e84d99a8e6fe0c3f949d0de81f073b
 
 
 
