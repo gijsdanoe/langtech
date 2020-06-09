@@ -47,28 +47,6 @@ def get_full_subject(result, dep="det", nsubj="nsubj"):
                 entity_list.append(token.text)
     return " ".join(entity_list)
 
-# def get_property_id(property_var):
-#     url = 'https://www.wikidata.org/w/api.php'
-#     params = {'action':'wbsearchentities','language':'en','format':'json','type':'property'}
-#     params['search'] = property_var
-#     json = requests.get(url,params, headers=HEADERS).json()
-#     if len(json['search']) == 0:
-#         return False
-#     else:
-#         result_id = json['search'][0]['id']
-#         return result_id
-#
-# def get_entity_id(entity_var):
-#     url = 'https://www.wikidata.org/w/api.php'
-#     params = {'action':'wbsearchentities','language':'en','format':'json'}
-#     params['search'] = entity_var
-#     json = requests.get(url,params, headers=HEADERS).json()
-#     if len(json['search']) == 0:
-#         return False
-#     else:
-#         result_id = json['search'][0]['id']
-#         return result_id
-
 # get all possible property id's
 def get_property(property):
     url = "https://www.wikidata.org/w/api.php"
@@ -118,25 +96,7 @@ def get_answer(property_var, entity_list):
                 pass
     resultlist = [x for x in resultlist if x != []]
     return resultlist[0]
-
-# def get_answer(property_var, entity_list):
-#     property_id = get_property_id(property_var)
-#     entity_id = get_entity_id(entity_list)
-#     if property_id != False or entity_id != False:
-#         query = '''SELECT ?resultLabel WHERE { wd:'''+entity_id+''' wdt:'''+property_id+''' ?result . SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . } }'''
-#         data = requests.get(URL,params={'query': query, 'format': 'json'}, headers=HEADERS).json()
-#         if data['results']['bindings']:
-#             answer_list = []
-#             for result in data['results']['bindings']:
-#                 answer = result['resultLabel']['value']
-#                 answer_list.append(answer)
-#             return answer_list
-#         else:
-#             return False
-#     else:
-#         return False
     
-
 def binary_questions(question, id):
     question = question.lower().rstrip()
     nlp = spacy.load('en_core_web_sm')
