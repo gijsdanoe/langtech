@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 
+#todo
+# what is x spec
 # list question is handled the same as x_y
+
+# how to solve how and when questions?
+# description , x_y, count, binary, how, when, who (persoon en description)
+
+# binary count order description
 
 import spacy
 import sys
