@@ -257,7 +257,14 @@ def description(line, id):
             desclist.append(result['description'])
         except:
             pass
-    return desclist[lslist.index(min(lslist))]
+    #return desclist[lslist.index(min(lslist))]
+    resultlist = desclist[lslist.index(min(lslist))]
+    print(id + "\t", end='')
+    if resultlist is not None:
+        for item in resultlist:
+             print(item, '\t', end='')
+    else:
+        print('No answer')
 
 
 def get_questions_other(question, id):
@@ -267,11 +274,19 @@ def get_questions_other(question, id):
         question = question[:-1]
     result = nlp(question)
 
-    related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention '}
-    if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass"):
+    related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention ', 'big': 'diameter', 'heavy': 'mass', 'study': 'study', 'old': 'age', 'weigh': 'mass'}
+    if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass" and result[1].dep_ != "acomp"):
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
-        r = nounify(result[1].lemma_)
-        property_var = list(r)[0].name().split('.')[0]
+        print(property_var)
+        if property_var.strip() == 'place of study':
+            property_var = 'educated at'
+        if property_var.strip() == 'cause of mass':
+            property_var == 'mass'
+        #r = nounify(result[1].lemma_)
+        #property_var = list(r)[0].name().split('.')[0]
+        entity_list = get_full_subject(result)
+    elif (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass" and result[1].dep_ == "acomp"):
+        property_var = related_to_dict[result[1].text]
         entity_list = get_full_subject(result)
     elif (result[0].dep_ == "nsubj" and result[1].dep_ == "ROOT"):
         try:
@@ -283,12 +298,6 @@ def get_questions_other(question, id):
         if entity_list.strip() == "":
             entity_list = get_full_subject(result, nsubj="pobj")
     elif (result[1].dep_ == "auxpass") and (result[0].dep_ == "advmod"):
-        property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
-        try:
-            entity_list = [(x.text) for x in result.ents][0]
-        except:
-            entity_list = get_full_subject(result)
-    elif result[0].dep_ == "prep" and result[1].dep_ == "det" and result[-1].dep_ == "ROOT":
         property_var = result[-1].text
         entity_list = get_full_subject(result, nsubj="dep")
     elif result[0].dep_ == "prep" and result[1].dep_ == "det" and result[-1].dep_ != "ROOT":
@@ -387,12 +396,14 @@ def main(argv):
                 count_questions(question, q_id)
             elif 'x_y ' in questiont:
                 print(q_id, '\t', 'No answer pik\n')
+            elif questiont == 'description':
+                description(question, q_id)
             elif questiont == 'x_y piep piper':
                 get_questions_other(question, q_id)
             elif questiont == 'when':
                 get_questions_other(question, q_id)
             elif questiont == 'how':
-                create_and_fire_query(question, q_id)
+                get_questions_other(question, q_id)
             else:
                 print(q_id, '\t', 'joo nog steeds geen antwoord\n')
             
