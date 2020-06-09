@@ -35,16 +35,27 @@ def get_full_subject(result, dep="det", nsubj="nsubj"):
                 entity_list.append(token.text)
     return " ".join(entity_list)
 
-def get_property_id(property_var):
-    url = 'https://www.wikidata.org/w/api.php'
-    params = {'action':'wbsearchentities','language':'en','format':'json','type':'property'}
-    params['search'] = property_var
-    json = requests.get(url,params, headers=HEADERS).json()
-    if len(json['search']) == 0:
-        return False
-    else:
-        result_id = json['search'][0]['id']
-        return result_id
+# def get_property_id(property_var):
+#     url = 'https://www.wikidata.org/w/api.php'
+#     params = {'action':'wbsearchentities','language':'en','format':'json','type':'property'}
+#     params['search'] = property_var
+#     json = requests.get(url,params, headers=HEADERS).json()
+#     if len(json['search']) == 0:
+#         return False
+#     else:
+#         result_id = json['search'][0]['id']
+#         return result_id
+#
+# def get_entity_id(entity_var):
+#     url = 'https://www.wikidata.org/w/api.php'
+#     params = {'action':'wbsearchentities','language':'en','format':'json'}
+#     params['search'] = entity_var
+#     json = requests.get(url,params, headers=HEADERS).json()
+#     if len(json['search']) == 0:
+#         return False
+#     else:
+#         result_id = json['search'][0]['id']
+#         return result_id
 
 # get all possible property id's
 def get_property(property):
@@ -55,7 +66,9 @@ def get_property(property):
     json = requests.get(url, params, headers=headers).json()
     proplist = []
     for result in json["search"]:
-        proplist.append(result["id"])
+        proplist.append((result["id"], levenshtein_distance(result["label"], property)))
+    proplist = sorted(proplist, key=lambda x: x[1])
+    proplist = [i[0] for i in proplist]
     return proplist
 
 # get all possible entity id's
@@ -67,37 +80,49 @@ def get_entity(entity):
     json = requests.get(url, params, headers=headers).json()
     entlist = []
     for result in json["search"]:
-        entlist.append(result["id"])
+        entlist.append((result["id"], levenshtein_distance(result["label"], entity)))
+    entlist = sorted(entlist, key=lambda x: x[1])
+    entlist = [i[0] for i in entlist]
     return entlist
 
-def get_entity_id(entity_var):
-    url = 'https://www.wikidata.org/w/api.php'
-    params = {'action':'wbsearchentities','language':'en','format':'json'}
-    params['search'] = entity_var
-    json = requests.get(url,params, headers=HEADERS).json()
-    if len(json['search']) == 0:
-        return False
-    else:
-        result_id = json['search'][0]['id']
-        return result_id
-
 def get_answer(property_var, entity_list):
-    property_id = get_property_id(property_var)
-    entity_id = get_entity_id(entity_list)
-    print(property_id, entity_id)
-    if property_id != False or entity_id != False:
-        query = '''SELECT ?resultLabel WHERE { wd:'''+entity_id+''' wdt:'''+property_id+''' ?result . SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . } }'''
-        data = requests.get(URL,params={'query': query, 'format': 'json'}, headers=HEADERS).json()
-        if data['results']['bindings']:
-            answer_list = []
-            for result in data['results']['bindings']:
-                answer = result['resultLabel']['value']
-                answer_list.append(answer)
-            return answer_list
-        else:
-            return False
-    else:
-        return False
+    propertylist = get_property(property_var)
+    entitylist = get_entity(entity_list)
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"}
+    url = 'https://query.wikidata.org/sparql'
+    # for every possible entity and property do the query, only include queries that return answer
+    resultlist = []
+    for ent in entitylist:
+        for prop in propertylist:
+            query = "SELECT ?xLabel WHERE {wd:" + ent + " wdt:" + prop + " ?x SERVICE wikibase:label {bd:serviceParam wikibase:language 'en' .}}"
+            try:
+                data = requests.get(url, headers=headers, params={'query': query, 'format': 'json'}).json()
+                multilist = []
+                for item in data['results']['bindings']:
+                    for var in item:
+                        multilist.append(item[var]['value'])
+                resultlist.append(multilist)
+            except:
+                pass
+    resultlist = [x for x in resultlist if x != []]
+    return resultlist[0]
+
+# def get_answer(property_var, entity_list):
+#     property_id = get_property_id(property_var)
+#     entity_id = get_entity_id(entity_list)
+#     if property_id != False or entity_id != False:
+#         query = '''SELECT ?resultLabel WHERE { wd:'''+entity_id+''' wdt:'''+property_id+''' ?result . SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . } }'''
+#         data = requests.get(URL,params={'query': query, 'format': 'json'}, headers=HEADERS).json()
+#         if data['results']['bindings']:
+#             answer_list = []
+#             for result in data['results']['bindings']:
+#                 answer = result['resultLabel']['value']
+#                 answer_list.append(answer)
+#             return answer_list
+#         else:
+#             return False
+#     else:
+#         return False
     
 
 def binary_questions(question, id):
@@ -221,7 +246,7 @@ def order_questions(question):
     pass
 
 def description(line, id):
-    nlp = spacy.load('en_core_websm')
+    nlp = spacy.load('en_core_web_sm')
     result = nlp(line)
     ll = []
     for token in result:
@@ -232,25 +257,28 @@ def description(line, id):
     for token in result.noun_chunks:
         nounlist.append(token.text)
     nounlist.pop(0)
-    entity = nounlist[-1]  # last noun chunk is entity
 
-    url = "https://www.wikidata.org/w/api.php"
-    params = {"action":"wbsearchentities","language":"en","format":"json"}
-    params["search"] = entity.rstrip()
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"}
-    json = requests.get(url, params, headers=headers).json()
+    try:
+        entity = nounlist[-1]  # last noun chunk is entity
 
-    lslist = []
-    desclist = []
+        url = "https://www.wikidata.org/w/api.php"
+        params = {"action":"wbsearchentities","language":"en","format":"json"}
+        params["search"] = entity.rstrip()
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36"}
+        json = requests.get(url, params, headers=headers).json()
 
-    for result in json['search']:
-        try:
-            lslist.append(levenshtein_distance(result['label'], entity))
-            desclist.append(result['description'])
-        except:
-            pass
-    print(id, '\t', desclist[lslist.index(min(lslist))])
+        lslist = []
+        desclist = []
 
+        for result in json['search']:
+            try:
+                lslist.append(levenshtein_distance(result['label'], entity))
+                desclist.append(result['description'])
+            except:
+                pass
+        print(id, '\t', desclist[lslist.index(min(lslist))])
+    except:
+        print("No answer")
 
 def get_questions_other(question, id):
     question = question.lower().rstrip()
@@ -258,13 +286,6 @@ def get_questions_other(question, id):
     if question[-1] == '?':
         question = question[:-1]
     result = nlp(question)
-
-    
-    #if result[0].pos_ == 'ADP':
-    #    question = question.replace(result[0].text + ' ', '', 1)
-    #    result = nlp(question)
-    for item in result:
-        print(item, item.dep_, item.pos_)
     related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention ', 'big': 'diameter', 'heavy': 'mass', 'study': 'study', 'old': 'age', 'weigh': 'mass', 'effects of ': 'has effect'}
     if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass" and result[1].dep_ != "acomp"):
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
@@ -303,7 +324,6 @@ def get_questions_other(question, id):
             property_var = [(x.text) for x in result.ents][0]
         except:
             property_var = get_full_subject(result)
-        print(entity_list, property_var)
         if entity_list in property_var:
             property_var = property_var.replace(entity_list, '')
             property_var = related_to_dict[property_var]
@@ -378,7 +398,6 @@ def get_questions_other(question, id):
                     property_var = " ".join(property_list)
                     entity_list = " ".join(entity_list)
     try:
-        print(property_var, entity_list)
         answer_list = get_answer(property_var, entity_list)
         print(id, "\t", end='')
         for item in answer_list:
