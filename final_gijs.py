@@ -123,8 +123,7 @@ def main(argv):
     print_example_queries()
     for line in sys.stdin:
         try:
-            #answer = create_and_fire_query(line)
-            answer = description(line)
+            answer = create_and_fire_query(line)
             print(answer)
         except:
             print("Could not find answer")
