@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 
+#todo
+# what is x spec
 # list question is handled the same as x_y
 
-import spacy
+# how to solve how and when questions?
+# description , x_y, count, binary, how, when, who (persoon en description)
+
+# binary count order description
+
+import spacy 
 import sys
 
 def questiontype(question):
@@ -16,26 +23,58 @@ def questiontype(question):
         return 'superlative_' + superlative[0]
 
     elif tokens[0].pos_ == 'AUX':
-        return 'yes_no'
-    elif tokens[0].pos_ == 'PRON' and tokens[1].pos_ == 'AUX':
-        return 'x_y'
+        return 'binary'
+    
+    elif question.split(" ")[0] == 'when':
+        return 'when'
+
+    elif tokens[0].pos_ =='ADV' and tokens[1].pos_ == 'ADJ':
+        if question.split(" ")[1] == 'many':
+            return 'count'
+        elif question.split(" ")[0] == 'how':
+            return 'how'
+    elif tokens[0].pos_ == 'ADV' and tokens[1].pos_ == 'AUX':
+        return 'how'
+
     elif tokens[0].pos_ == 'VERB' and tokens[1].pos_ == 'DET':
         return 'x_y_list'
-    elif question.split(" ")[0] == 'how' and question.split(" ")[1] == 'many':
-        return 'count'
-    elif tokens[0].pos_ =='ADV' and tokens[1].pos_ == 'ADJ':
-        return 'x_y ' + tokens[1].lemma_
+    
     elif tokens[0].pos_ == 'ADP' and tokens[1].pos_ == 'DET':
         return 'x_y piep piper'
 
+<<<<<<< HEAD
+    elif tokens[0].pos_ == 'PRON' and tokens[1].pos_ == 'AUX':
+        if 'ADP' not in [i.pos_ for i in tokens]:
+            return 'description'
+        else: return 'x_y'
+
+    #other questiosn are solved by Younes' other function
+    else:
+        return 'other'
+=======
     #who question, almost always inventor, quick solution for now
     elif question.split(" ") == 'who':
         return 'inventor_y'
+>>>>>>> f683e17445e84d99a8e6fe0c3f949d0de81f073b
     #else:
         
 
 # testing the function
 
+<<<<<<< HEAD
+
+#for line in qlist:
+
+for line in sys.stdin:
+    nlp = spacy.load('en_core_web_sm')
+    tokens = nlp(line)
+    print([i.pos_ for i in tokens])
+    try:
+        qtype = questiontype(line)
+        print(qtype, line)
+    except:
+        print(None, line)
+=======
 #with open(sys.argv[1], 'r') as f:
 #    qlist = list()
 #    for line in f:
@@ -49,6 +88,7 @@ def questiontype(question):
 #        print(qtype, line)
 #    except:
 #        print(None, line)
+>>>>>>> f683e17445e84d99a8e6fe0c3f949d0de81f073b
 
 
 
