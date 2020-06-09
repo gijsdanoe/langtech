@@ -84,7 +84,6 @@ def get_entity_id(entity_var):
 def get_answer(property_var, entity_list):
     property_id = get_property_id(property_var)
     entity_id = get_entity_id(entity_list)
-    print(property_id, entity_id)
     if property_id != False or entity_id != False:
         query = '''SELECT ?resultLabel WHERE { wd:'''+entity_id+''' wdt:'''+property_id+''' ?result . SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . } }'''
         data = requests.get(URL,params={'query': query, 'format': 'json'}, headers=HEADERS).json()
@@ -107,8 +106,6 @@ def binary_questions(question, id):
         question = question[:-1]
     result = nlp(question)
     # Debug statement om te kijken wat de lemma, pos en dep is van elk woord in de zin
-    for item in result:
-        print(item, item.lemma_, item.pos_, item.dep_)
     relation = {'is': 'subclass of'}
     if result[0].dep_ == "aux" and result[1].dep_ == "nsubj":
         for item in result:
@@ -135,13 +132,11 @@ def binary_questions(question, id):
         property_var = False
         entity_list = False
 
-    print(property_var, entity_list)
-
     answer_list = get_answer(property_var, entity_list)
-    answer = 'No'
+    answer = 'no'
     for item in answer_list:
         if q_answer in item.lower():
-            answer = 'Yes'
+            answer = 'yes'
     print(id + "\t" + answer)
 
 def count_questions(question, id):
@@ -150,19 +145,15 @@ def count_questions(question, id):
     if question[-1] == '?':
         question = question[:-1]
     result = nlp(question)
-    for item in result:
-        print(item, item.lemma_, item.pos_, item.dep_)
     if result[0].dep_ == "advmod" and result[1].dep_ == "amod" and result[-1].pos_ == 'VERB' and result[2].dep_ == 'dobj':
         property_var = get_full_subject(result, nsubj="dobj", dep="amod")
         property_var = property_var.replace('how', '')
         entity_var = get_full_subject(result, dep="amod")
-        print(entity_var, property_var)
     elif result[0].dep_ == "advmod" and result[1].dep_ == "amod" and result[-1].pos_ == 'VERB' and result[2].dep_ != 'dobj':
         entity_var = get_full_subject(result, dep="amod")
         property_var = result[1].head.text
         entity_var = entity_var.replace(property_var, '')
         entity_var = entity_var.replace('how', '')
-        print(entity_var, property_var)
     else:
         property_var = False
         entity_var = False
@@ -273,7 +264,6 @@ def get_questions_other(question, id):
     if question[-1] == '?':
         question = question[:-1]
     result = nlp(question)
-
     related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention ', 'big': 'diameter', 'heavy': 'mass', 'study': 'study', 'old': 'age', 'weigh': 'mass'}
     if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass" and result[1].dep_ != "acomp"):
         property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
@@ -282,8 +272,6 @@ def get_questions_other(question, id):
             property_var = 'educated at'
         if property_var.strip() == 'cause of mass':
             property_var == 'mass'
-        #r = nounify(result[1].lemma_)
-        #property_var = list(r)[0].name().split('.')[0]
         entity_list = get_full_subject(result)
     elif (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass" and result[1].dep_ == "acomp"):
         property_var = related_to_dict[result[1].text]
@@ -309,6 +297,17 @@ def get_questions_other(question, id):
             entity_list = [(x.text) for x in result.ents][0]
         except:
             entity_list = get_full_subject(result)
+    elif result[0].dep_ == "ROOT" and result[-1].dep_ == "pobj":
+        property_var = get_full_subject(result, nsubj='dobj')
+        entity_list = get_full_subject(result, nsubj='pobj')
+        if entity_list in property_var:
+            property_var = property_var.replace(entity_list, '')
+        if 'of' in property_var:
+            property_var = property_var.replace('of', '')
+        if 'members' in property_var:
+            property_var = property_var.replace('members', 'member')
+        if 'mission' in entity_list:
+            entity_list = entity_list.replace('mission', '')
     else:
         property_tokens = []
         entity_tokens = []
@@ -331,7 +330,6 @@ def get_questions_other(question, id):
                         entity_list.append(token.text)
                     property_var = " ".join(property_list)
                     entity_list = " ".join(entity_list)
-                    #return " ".join(property_list), " ".join(entity_list)
         else:
             for item in result[1:]:
                 if item.dep_ == "nsubj":
@@ -351,15 +349,14 @@ def get_questions_other(question, id):
                         entity_list.append(token.text)
                     property_var = " ".join(property_list)
                     entity_list = " ".join(entity_list)
-                    #return " ".join(property_list), " ".join(entity_list)
-    print(entity_list, property_var)
     try:
         answer_list = get_answer(property_var, entity_list)
         print(id, "\t", end='')
         for item in answer_list:
             print(item, '\t', end='')
-        print("\n")
+        print('')
     except TypeError:
+        print(id, "\t", end='')
         print("No answer")
 
 
@@ -380,8 +377,9 @@ def main(argv):
         for line in sys.stdin:
             line = line.split("\t")
             q_id = line[0]
-            question = line[1].lower()
-            print(question)
+            question = line[1].lower().strip()
+            if question[-1] == '.':
+                question = question.replace('.', '')
             # Lennart vertel ons ff wanneer we welke functie kunnen runnen
             # Alleen voor Yes/No questions
             # Breid main vooral ook uit voor de andere vraagsoorten
@@ -391,23 +389,22 @@ def main(argv):
             elif questiont == 'x_y':
                 get_questions_other(question, q_id)
             elif questiont == 'x_y_list':
-                create_and_fire_query(question, q_id)
+                get_questions_other(question, q_id)
             elif questiont == 'count':
                 count_questions(question, q_id)
             elif 'x_y ' in questiont:
-                print(q_id, '\t', 'No answer pik\n')
+                print(q_id, '\t', 'No answer pik')
             elif questiont == 'description':
                 description(question, q_id)
             elif questiont == 'x_y piep piper':
-                get_questions_other(question, q_id)
+                create_and_fire_query(question, q_id)
             elif questiont == 'when':
                 get_questions_other(question, q_id)
             elif questiont == 'how':
                 get_questions_other(question, q_id)
             else:
-                print(q_id, '\t', 'joo nog steeds geen antwoord\n')
-            
-            print("New question:\n")
+                print(q_id, '\t', 'joo nog steeds geen antwoord')
+
             
             
 
