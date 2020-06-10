@@ -96,7 +96,7 @@ def get_answer(property_var, entity_list):
                 pass
     resultlist = [x for x in resultlist if x != []]
     return resultlist[0]
-    
+
 def binary_questions(question, id):
     question = question.lower().rstrip()
     nlp = spacy.load('en_core_web_sm')
@@ -129,13 +129,15 @@ def binary_questions(question, id):
     else:
         property_var = False
         entity_list = False
-
-    answer_list = get_answer(property_var, entity_list)
-    answer = 'no'
-    for item in answer_list:
-        if q_answer in item.lower():
-            answer = 'yes'
-    print(id + "\t" + answer)
+    try:
+        answer_list = get_answer(property_var, entity_list)
+        answer = 'no'
+        for item in answer_list:
+            if q_answer in item.lower():
+                answer = 'yes'
+        print(id + "\t" + answer)
+    except:
+        print(id +'\t' + 'No answer')
 
 def count_questions(question, id):
     question = question.lower().rstrip()
@@ -155,14 +157,16 @@ def count_questions(question, id):
     else:
         property_var = False
         entity_var = False
-    
-    
-    answer_list = get_answer(property_var, entity_var)
-    print(id + "\t", end='')
-    if answer_list != False:
-        print(len(answer_list))
-    else:
-        print('No answer')
+
+    try:
+        answer_list = get_answer(property_var, entity_var)
+        print(id + "\t", end='')
+        if answer_list != False:
+            print(len(answer_list))
+        else:
+            print('No answer')
+    except:
+        print(id + '\t' + 'No answer')
 
 def create_and_fire_query(line, id):
     nlp = spacy.load('en_core_web_sm')
@@ -212,7 +216,7 @@ def create_and_fire_query(line, id):
              print(item, '\t', end='')
     else:
         print('No answer')
-    
+
 
 def order_questions(question):
     pass
@@ -260,7 +264,10 @@ def get_questions_other(question, id):
     result = nlp(question)
     related_to_dict = {'born':'birth', 'where':'place of ', 'die':'death', 'when':'date of ', 'how':'cause of ', 'in what city': 'place of ', 'invented': 'invention ', 'discovered': 'invention ', 'big': 'diameter', 'heavy': 'mass', 'study': 'study', 'old': 'age', 'weigh': 'mass', 'effects of ': 'has effect'}
     if result[1].dep_ != "ROOT" and (result[0].dep_ == "advmod" and result[1].dep_ != "auxpass" and result[1].dep_ != "acomp"):
-        property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
+        try:
+            property_var = related_to_dict[result[0].text] + related_to_dict[result[-1].text]
+        except:
+            property_var = get_full_subject(result)
         if property_var.strip() == 'place of study':
             property_var = 'educated at'
         if property_var.strip() == 'cause of mass':
@@ -298,12 +305,12 @@ def get_questions_other(question, id):
             property_var = get_full_subject(result)
         if entity_list in property_var:
             property_var = property_var.replace(entity_list, '')
-            
+
         try:
             property_var = related_to_dict[property_var]
         except:
             property_var = property_var.replace('of', '')
-        
+
     elif result[0].dep_ == "ROOT" and result[-1].dep_ == "pobj":
         property_var = get_full_subject(result, nsubj='dobj')
         entity_list = get_full_subject(result, nsubj='pobj')
@@ -331,7 +338,7 @@ def get_questions_other(question, id):
             entity_list = [(x.text) for x in result.ents][0]
         except:
             entity_list = get_full_subject(result, nsubj='attr', dep='acl')
-        
+
     else:
         property_tokens = []
         entity_tokens = []
@@ -428,8 +435,8 @@ def main(argv):
                 get_questions_other(question, q_id)
             else:
                 get_questions_other(question, q_id)
-            
-            
+
+
 
 if __name__ == "__main__":
     main(sys.argv)
